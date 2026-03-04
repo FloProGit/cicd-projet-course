@@ -9,7 +9,7 @@ on:
     branches: [main]
 
 jobs:
-  tests:
+  check-tests-backend:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           cache: 'npm'
-          cache-dependency-path: server/package-lock.json
+          cache-dependency-path: ./server/package-lock.json
       - name: install dependencies
         run: npm ci --prefer-offline
       - name: vérifie le code
@@ -35,12 +35,63 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  check-tests-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
+    steps:
+      - name: checkout le code
+        uses: actions/checkout@v6
+      - name: installer node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          cache-dependency-path: ./client/package-lock.json
+      - name: install dependencies
+        run: npm ci --prefer-offline
+      - name: vérifie le code
+        run: npm run lint
+      - name: vérifie les vulnerabilités des dépendances
+        run: npm audit
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./client
+    steps:
+      - name: checkout le code
+        uses: actions/checkout@v6
+      - name: installer node.js
+        uses: actions/setup-node@v6
+        with:
+          cache: 'npm'
+          cache-dependency-path: ./client/package-lock.json
+      - name: install dependencies
+        run: npm ci --prefer-offline
+      - name: vérifie le code
+        run: npm run lint
+      - name: build application front end
+        run: npm run build
+      - name: upload build
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-build
+          path: ./client/dist
+          retention-days: 30
+
   deploy:
-    needs: tests
+    needs: [check-tests-backend,build-frontend]
     runs-on: ubuntu-latest
     steps:
       - name: checkout le code
         uses: actions/checkout@v6
+      - name: download build
+        uses: actions/download-artifact@v6
+        with:
+          name: frontend-build
+          path: ./dist
       - name: déployer sur le serveur
         run: |
           eval $(ssh-agent -s)
@@ -48,5 +99,6 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ env.SERVER_IP }} >> ~/.ssh/known_hosts
           scp -r ./server ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/var/www
+          scp -r ./dist ${{ env.SERVER_USER }}@${{ env.SERVER_IP }}:/var/www/dist
           ssh ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /var/www/server && npm install --omit=dev"
           ssh ${{ env.SERVER_USER }}@${{ env.SERVER_IP }} "cd /var/www/server && pm2 startOrRestart ecosystem.config.js --env production && pm2 save"
