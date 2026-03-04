@@ -104,7 +104,7 @@ jobs:
           path: ./client/dist
       - name: start backend
         run: |
-          cd serveur
+          cd server
           npm start &
       - name: exec cypress tests
         uses: cypress-io/github-action@v7
