@@ -35,7 +35,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
-  check-tests-frontend:
+  check-frontend:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,6 +56,7 @@ jobs:
         run: npm audit
 
   build-frontend:
+    needs: [check-frontend]
     runs-on: ubuntu-latest
     defaults:
       run:
