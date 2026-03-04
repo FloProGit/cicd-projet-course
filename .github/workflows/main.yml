@@ -95,17 +95,16 @@ jobs:
           cache-dependency-path: "**/package-lock.json"
       - name: install dependencies
         run: |
-          cd serveur
+          cd server
           npm ci --prefer-offline
       - name: download build artefact
         uses: actions/download-artifact@v6
         with:
-          name: build
+          name: frontend-build
           path: ./client/dist
       - name: start backend
         run: |
           cd serveur
-          npm run start:dev
           npm start &
       - name: exec cypress tests
         uses: cypress-io/github-action@v7
@@ -115,7 +114,7 @@ jobs:
           start: npm run preview
           wait-on: 'http://localhost:4173'
           wait-on-timeout: 60
-          config-file: baseUrl=http://localhost:4173
+          config: baseUrl=http://localhost:4173
 
 
   deploy:
